@@ -121,22 +121,22 @@ def _derive(e: ast.expr, var: ast.expr) -> ast.expr:
         return ast.Num(1) if var_equals(e, var) else ast.Num(0)
 
     if is_sum(e):
-        u = cast(ast.BinOp, e).left
-        v = cast(ast.BinOp, e).right
+        op = cast(ast.BinOp, e)
+        u, v = op.left, op.right
         return make_sum(
             _derive(u, var),
             _derive(v, var))
 
     if is_prod(e):
-        u = cast(ast.BinOp, e).left
-        v = cast(ast.BinOp, e).right
+        op = cast(ast.BinOp, e)
+        u, v = op.left, op.right
         return make_sum(
             make_prod(u, _derive(v, var)),
             make_prod(v, _derive(u, var)))
 
     if is_pow_num(e):
-        u = cast(ast.BinOp, e).left
-        n = cast(ast.Num, cast(ast.BinOp, e).right)
+        op = cast(ast.BinOp, e)
+        u, n = op.left, cast(ast.Num, op.right)
         return make_prod(
             make_prod(n, make_pow(u, ast.Num(n.n - 1))),
             _derive(u, var)
