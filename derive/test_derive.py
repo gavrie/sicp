@@ -27,7 +27,7 @@ def test_derive_poly_2() -> None:
 
 def test_derive_poly_3() -> None:
     assert derive_str("a*x**3 + b*x**2 + c*x + d", "x") == \
-        "a * (3 * x ** 2) + b * (2 * x) + c"
+        "a * (3 * x ** 2) + b * (2 * x) + c"  # -> 3*a*x**2 + 2*b*x + c
 
 
 def test_derive_poly_4() -> None:
