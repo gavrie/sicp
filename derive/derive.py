@@ -2,7 +2,6 @@ from typing import cast, Tuple
 import ast
 import logging
 
-import astunparse  # type: ignore
 import astor  # type: ignore
 
 """
@@ -172,6 +171,4 @@ def _parse(s: str) -> ast.expr:
 
 def derive(expr: str, var: str) -> str:
     result = _derive(_parse(expr), _parse(var))
-    #return cast(str, ast.dump(ast.Expr(result)).strip())
-    #return cast(str, astunparse.unparse(ast.Expr(result)).strip())
     return cast(str, astor.to_source(ast.Expr(result)).strip())
