@@ -25,7 +25,7 @@ def as_num(e: ast.expr) -> Number:
     return n.n
 
 
-def make_num(n: Number) -> ast.Num:
+def num(n: Number) -> ast.Num:
     return ast.Num(n)
 
 
@@ -57,7 +57,7 @@ def same_var(v1: ast.expr, v2: ast.expr) -> bool:
     return v1.id == v2.id
 
 
-def as_binop(e: ast.expr) -> Tuple[ast.expr, ast.expr]:
+def operands(e: ast.expr) -> Tuple[ast.expr, ast.expr]:
     op = cast(ast.BinOp, e)
     return op.left, op.right
 
@@ -78,40 +78,40 @@ def is_pow_num(v: ast.expr) -> bool:
             isinstance(v.right, ast.Num))
 
 
-def make_sum(a1: ast.expr, a2: ast.expr) -> ast.expr:
+def sum(a1: ast.expr, a2: ast.expr) -> ast.expr:
     logger.debug(f"make_sum: {ast.dump(a1)} + {ast.dump(a2)}")
 
-    if num_equals(a1, make_num(0)):
+    if num_equals(a1, num(0)):
         return a2
-    if num_equals(a2, make_num(0)):
+    if num_equals(a2, num(0)):
         return a1
 
     if is_num(a1) and is_num(a2):
         n1 = as_num(a1)
         n2 = as_num(a2)
-        return make_num(n1 + n2)
+        return num(n1 + n2)
 
     if a1 == a2:
-        return make_prod(make_num(2), a1)
+        return product(num(2), a1)
 
     return ast.BinOp(op=ast.Add(), left=a1, right=a2)
 
 
-def make_prod(m1: ast.expr, m2: ast.expr) -> ast.expr:
-    logger.debug(f"make_prod: {ast.dump(m1)} * {ast.dump(m2)}")
+def product(m1: ast.expr, m2: ast.expr) -> ast.expr:
+    logger.debug(f"product: {ast.dump(m1)} * {ast.dump(m2)}")
 
-    if num_equals(m1, make_num(1)):
+    if num_equals(m1, num(1)):
         return m2
-    if num_equals(m2, make_num(1)):
+    if num_equals(m2, num(1)):
         return m1
 
     if is_num(m1) and is_num(m2):
         n1 = as_num(m1)
         n2 = as_num(m2)
-        return make_num(n1 * n2)
+        return num(n1 * n2)
 
-    if num_equals(m1, make_num(0)) or num_equals(m2, make_num(0)):
-        return make_num(0)
+    if num_equals(m1, num(0)) or num_equals(m2, num(0)):
+        return num(0)
 
     return ast.BinOp(op=ast.Mult(), left=m1, right=m2)
 
@@ -119,10 +119,10 @@ def make_prod(m1: ast.expr, m2: ast.expr) -> ast.expr:
 def make_pow(base: ast.expr, exp: ast.expr) -> ast.expr:
     logger.debug(f"make_pow: {ast.dump(base)} ** {ast.dump(exp)}")
 
-    if num_equals(exp, make_num(0)):
-        return make_num(1)
+    if num_equals(exp, num(0)):
+        return num(1)
 
-    if num_equals(exp, make_num(1)):
+    if num_equals(exp, num(1)):
         return base
 
     return ast.BinOp(op=ast.Pow(), left=base, right=exp)
@@ -132,28 +132,28 @@ def derive(e: ast.expr, var: ast.expr) -> ast.expr:
     logger.debug(f"derive: {ast.dump(e)}, {ast.dump(var)}")
 
     if is_num(e):
-        return make_num(0)
+        return num(0)
 
     if is_var(e):
-        return make_num(1) if same_var(e, var) else make_num(0)
+        return num(1) if same_var(e, var) else num(0)
 
     if is_sum(e):
-        u, v = as_binop(e)
-        return make_sum(
+        u, v = operands(e)
+        return sum(
             derive(u, var),
             derive(v, var))
 
     if is_prod(e):
-        u, v = as_binop(e)
-        return make_sum(
-            make_prod(u, derive(v, var)),
-            make_prod(v, derive(u, var)))
+        u, v = operands(e)
+        return sum(
+            product(u, derive(v, var)),
+            product(v, derive(u, var)))
 
     if is_pow_num(e):
-        u, v = as_binop(e)
+        u, v = operands(e)
         n = as_num(v)
-        return make_prod(
-            make_prod(v, make_pow(u, make_num(n - 1))),
+        return product(
+            product(v, make_pow(u, num(n - 1))),
             derive(u, var)
         )
 
