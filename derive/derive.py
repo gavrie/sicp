@@ -1,4 +1,4 @@
-from typing import cast, Tuple
+from typing import cast, Tuple, Union
 import ast
 import logging
 
@@ -13,22 +13,30 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
+Number = Union[int, float, complex]
+
+
 def is_num(v: ast.expr) -> bool:
     return isinstance(v, ast.Num)
 
 
-def as_num(e: ast.expr) -> ast.Num:
-    return cast(ast.Num, e)
+def as_num(e: ast.expr) -> Number:
+    n = cast(ast.Num, e)
+    return n.n
+
+
+def make_num(n: Number) -> ast.Num:
+    return ast.Num(n)
 
 
 def num_equals(v1: ast.expr, v2: ast.expr) -> bool:
     if not is_num(v1) or not is_num(v2):
         return False
 
-    v1 = as_num(v1)
-    v2 = as_num(v2)
+    n1 = as_num(v1)
+    n2 = as_num(v2)
 
-    return v1.n == v2.n
+    return n1 == n2
 
 
 def is_var(v: ast.expr) -> bool:
@@ -39,7 +47,7 @@ def as_var(e: ast.expr) -> ast.Name:
     return cast(ast.Name, e)
 
 
-def var_equals(v1: ast.expr, v2: ast.expr) -> bool:
+def same_var(v1: ast.expr, v2: ast.expr) -> bool:
     if not is_var(v1) or not is_var(v2):
         return False
 
@@ -73,19 +81,18 @@ def is_pow_num(v: ast.expr) -> bool:
 def make_sum(a1: ast.expr, a2: ast.expr) -> ast.expr:
     logger.debug(f"make_sum: {ast.dump(a1)} + {ast.dump(a2)}")
 
-    if num_equals(a1, ast.Num(0)):
+    if num_equals(a1, make_num(0)):
         return a2
-    if num_equals(a2, ast.Num(0)):
+    if num_equals(a2, make_num(0)):
         return a1
 
     if is_num(a1) and is_num(a2):
-        a1 = as_num(a1)
-        a2 = as_num(a2)
-
-        return ast.Num(a1.n + a2.n)
+        n1 = as_num(a1)
+        n2 = as_num(a2)
+        return make_num(n1 + n2)
 
     if a1 == a2:
-        return make_prod(ast.Num(2), a1)
+        return make_prod(make_num(2), a1)
 
     return ast.BinOp(op=ast.Add(), left=a1, right=a2)
 
@@ -93,19 +100,18 @@ def make_sum(a1: ast.expr, a2: ast.expr) -> ast.expr:
 def make_prod(m1: ast.expr, m2: ast.expr) -> ast.expr:
     logger.debug(f"make_prod: {ast.dump(m1)} * {ast.dump(m2)}")
 
-    if num_equals(m1, ast.Num(1)):
+    if num_equals(m1, make_num(1)):
         return m2
-    if num_equals(m2, ast.Num(1)):
+    if num_equals(m2, make_num(1)):
         return m1
 
     if is_num(m1) and is_num(m2):
-        m1 = as_num(m1)
-        m2 = as_num(m2)
+        n1 = as_num(m1)
+        n2 = as_num(m2)
+        return make_num(n1 * n2)
 
-        return ast.Num(m1.n * m2.n)
-
-    if num_equals(m1, ast.Num(0)) or num_equals(m2, ast.Num(0)):
-        return ast.Num(0)
+    if num_equals(m1, make_num(0)) or num_equals(m2, make_num(0)):
+        return make_num(0)
 
     return ast.BinOp(op=ast.Mult(), left=m1, right=m2)
 
@@ -113,10 +119,10 @@ def make_prod(m1: ast.expr, m2: ast.expr) -> ast.expr:
 def make_pow(base: ast.expr, exp: ast.expr) -> ast.expr:
     logger.debug(f"make_pow: {ast.dump(base)} ** {ast.dump(exp)}")
 
-    if num_equals(exp, ast.Num(0)):
-        return ast.Num(1)
+    if num_equals(exp, make_num(0)):
+        return make_num(1)
 
-    if num_equals(exp, ast.Num(1)):
+    if num_equals(exp, make_num(1)):
         return base
 
     return ast.BinOp(op=ast.Pow(), left=base, right=exp)
@@ -126,10 +132,10 @@ def derive(e: ast.expr, var: ast.expr) -> ast.expr:
     logger.debug(f"derive: {ast.dump(e)}, {ast.dump(var)}")
 
     if is_num(e):
-        return ast.Num(0)
+        return make_num(0)
 
     if is_var(e):
-        return ast.Num(1) if var_equals(e, var) else ast.Num(0)
+        return make_num(1) if same_var(e, var) else make_num(0)
 
     if is_sum(e):
         u, v = as_binop(e)
@@ -147,7 +153,7 @@ def derive(e: ast.expr, var: ast.expr) -> ast.expr:
         u, v = as_binop(e)
         n = as_num(v)
         return make_prod(
-            make_prod(n, make_pow(u, ast.Num(n.n - 1))),
+            make_prod(v, make_pow(u, make_num(n - 1))),
             derive(u, var)
         )
 
