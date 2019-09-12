@@ -9,12 +9,11 @@ Based on SICP section 2.3.2 Example: Symbolic Differentiation.
 """
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
 def is_num(v: ast.expr) -> bool:
-    logger.debug(f"is_num: {ast.dump(v)}")
     return isinstance(v, ast.Num)
 
 
@@ -23,8 +22,6 @@ def as_num(e: ast.expr) -> ast.Num:
 
 
 def num_equals(v1: ast.expr, v2: ast.expr) -> bool:
-    logger.debug(f"num_equals: {ast.dump(v1)} == {ast.dump(v2)} ?")
-
     if not is_num(v1) or not is_num(v2):
         return False
 
@@ -35,18 +32,19 @@ def num_equals(v1: ast.expr, v2: ast.expr) -> bool:
 
 
 def is_var(v: ast.expr) -> bool:
-    logger.debug(f"is_var: {ast.dump(v)}")
     return isinstance(v, ast.Name)
 
 
-def var_equals(v1: ast.expr, v2: ast.expr) -> bool:
-    logger.debug(f"var_equals: {ast.dump(v1)}, {ast.dump(v2)}")
+def as_var(e: ast.expr) -> ast.Name:
+    return cast(ast.Name, e)
 
+
+def var_equals(v1: ast.expr, v2: ast.expr) -> bool:
     if not is_var(v1) or not is_var(v2):
         return False
 
-    v1 = cast(ast.Name, v1)
-    v2 = cast(ast.Name, v2)
+    v1 = as_var(v1)
+    v2 = as_var(v2)
 
     return v1.id == v2.id
 
@@ -73,6 +71,8 @@ def is_pow_num(v: ast.expr) -> bool:
 
 
 def make_sum(a1: ast.expr, a2: ast.expr) -> ast.expr:
+    logger.debug(f"make_sum: {ast.dump(a1)} + {ast.dump(a2)}")
+
     if num_equals(a1, ast.Num(0)):
         return a2
     if num_equals(a2, ast.Num(0)):
@@ -91,6 +91,8 @@ def make_sum(a1: ast.expr, a2: ast.expr) -> ast.expr:
 
 
 def make_prod(m1: ast.expr, m2: ast.expr) -> ast.expr:
+    logger.debug(f"make_prod: {ast.dump(m1)} * {ast.dump(m2)}")
+
     if num_equals(m1, ast.Num(1)):
         return m2
     if num_equals(m2, ast.Num(1)):
@@ -109,7 +111,7 @@ def make_prod(m1: ast.expr, m2: ast.expr) -> ast.expr:
 
 
 def make_pow(base: ast.expr, exp: ast.expr) -> ast.expr:
-    logger.info(f"make_pow: {ast.dump(base)} ** {ast.dump(exp)}")
+    logger.debug(f"make_pow: {ast.dump(base)} ** {ast.dump(exp)}")
 
     if num_equals(exp, ast.Num(0)):
         return ast.Num(1)
@@ -120,8 +122,8 @@ def make_pow(base: ast.expr, exp: ast.expr) -> ast.expr:
     return ast.BinOp(op=ast.Pow(), left=base, right=exp)
 
 
-def _derive(e: ast.expr, var: ast.expr) -> ast.expr:
-    logger.debug(f"deriv: {ast.dump(e)}, {ast.dump(var)}")
+def derive(e: ast.expr, var: ast.expr) -> ast.expr:
+    logger.debug(f"derive: {ast.dump(e)}, {ast.dump(var)}")
 
     if is_num(e):
         return ast.Num(0)
@@ -132,21 +134,21 @@ def _derive(e: ast.expr, var: ast.expr) -> ast.expr:
     if is_sum(e):
         u, v = as_binop(e)
         return make_sum(
-            _derive(u, var),
-            _derive(v, var))
+            derive(u, var),
+            derive(v, var))
 
     if is_prod(e):
         u, v = as_binop(e)
         return make_sum(
-            make_prod(u, _derive(v, var)),
-            make_prod(v, _derive(u, var)))
+            make_prod(u, derive(v, var)),
+            make_prod(v, derive(u, var)))
 
     if is_pow_num(e):
         u, v = as_binop(e)
         n = as_num(v)
         return make_prod(
             make_prod(n, make_pow(u, ast.Num(n.n - 1))),
-            _derive(u, var)
+            derive(u, var)
         )
 
     raise Exception(f"Unknown expression: {ast.dump(e)}")
@@ -154,7 +156,7 @@ def _derive(e: ast.expr, var: ast.expr) -> ast.expr:
 
 ##########
 
-def _parse(s: str) -> ast.expr:
+def parse(s: str) -> ast.expr:
     """
     Parse a string into a Python AST.
     """
@@ -169,6 +171,7 @@ def _parse(s: str) -> ast.expr:
 
 ##########
 
-def derive(expr: str, var: str) -> str:
-    result = _derive(_parse(expr), _parse(var))
+def derive_str(expr: str, var: str) -> str:
+    logger.debug(f"derive_str: d({expr}) / d{var}")
+    result = derive(parse(expr), parse(var))
     return cast(str, astor.to_source(ast.Expr(result)).strip())
