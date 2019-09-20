@@ -75,37 +75,11 @@ def is_prod(v: ast.expr) -> bool:
 def sum(a1: ast.expr, a2: ast.expr) -> ast.expr:
     logger.debug(f"make_sum: {ast.dump(a1)} + {ast.dump(a2)}")
 
-    if num_equals(a1, num(0)):
-        return a2
-    if num_equals(a2, num(0)):
-        return a1
-
-    if is_num(a1) and is_num(a2):
-        n1 = as_num(a1)
-        n2 = as_num(a2)
-        return num(n1 + n2)
-
-    if a1 == a2:
-        return product(num(2), a1)
-
     return ast.BinOp(op=ast.Add(), left=a1, right=a2)
 
 
 def product(m1: ast.expr, m2: ast.expr) -> ast.expr:
     logger.debug(f"product: {ast.dump(m1)} * {ast.dump(m2)}")
-
-    if num_equals(m1, num(1)):
-        return m2
-    if num_equals(m2, num(1)):
-        return m1
-
-    if is_num(m1) and is_num(m2):
-        n1 = as_num(m1)
-        n2 = as_num(m2)
-        return num(n1 * n2)
-
-    if num_equals(m1, num(0)) or num_equals(m2, num(0)):
-        return num(0)
 
     return ast.BinOp(op=ast.Mult(), left=m1, right=m2)
 
